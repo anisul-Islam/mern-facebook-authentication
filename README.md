@@ -1,4 +1,4 @@
-# facebook-authentication
+# mern-facebook-authentication
 - [doc](https://dev.to/quod_ai/how-to-integrate-facebook-login-api-into-your-react-app-33de)
 - step1: get facebook client id 
     - https://developers.facebook.com/
