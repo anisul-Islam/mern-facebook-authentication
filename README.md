@@ -1,4 +1,5 @@
 # facebook-authentication
+- [doc](https://dev.to/quod_ai/how-to-integrate-facebook-login-api-into-your-react-app-33de)
 - step1: get facebook client id 
     - https://developers.facebook.com/
     - register as developer
@@ -59,5 +60,95 @@ export const loginWithFacebook = async (data) => {
     data
   );
   return response.data;
+};
+```
+- backend part
+```js
+// facebook
+authRoutes.post("/facebook-login", handleFacebookLogin);
+```
+
+- controller part
+- `npm install node-fetch@2` compatible for require
+```js
+const fetch = require("node-fetch");
+const handleFacebookLogin = async (req, res) => {
+  try {
+    const { userID, accessToken } = req.body;
+
+    // create the url for requesting userInfo
+    const url = `http://graph.facebook.com/v2.11/${userID}/?fields=id,name,email&access_token=${accessToken}`;
+
+    // make the request with fetch api
+    const response = await fetch(url);
+    const data = await response.json();
+    const { name, email, id } = data;
+
+    // check user with this email already exist or not
+    const exsitingUser = await User.findOne({ email });
+    if (exsitingUser) {
+      console.log("user exist");
+      // create a token for user
+      const token = jwt.sign(
+        { _id: exsitingUser._id },
+        String(dev.app.jwtSecretKey),
+        {
+          expiresIn: "7d",
+        }
+      );
+
+      // step 7: create user info
+      const userInfo = {
+        _id: exsitingUser._id,
+        name: exsitingUser.name,
+        email: exsitingUser.email,
+        phone: exsitingUser.phone,
+      };
+
+      return res.json({ token, userInfo });
+    } else {
+      // if user does not exist create a new user
+      // let create a dummy password
+      let password = email + dev.app.jwtSecretKey;
+      const newUser = new User({
+        name,
+        email,
+        password,
+      });
+
+      const userData = await newUser.save();
+      if (!userData) {
+        return res.status(400).send({
+          message: "user was not created with google",
+        });
+      }
+
+      // if user is created
+      const token = jwt.sign(
+        { _id: userData._id },
+        String(dev.app.jwtSecretKey),
+        {
+          expiresIn: "7d",
+        }
+      );
+
+      // step 7: create user info
+      const userInfo = {
+        _id: userData._id,
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        isAdmin: userData.isAdmin,
+      };
+
+      return res.json({ token, userInfo });
+    }
+
+    res.send("facebook login successful");
+  } catch (error) {
+    res.status(500).send({
+      message: error.message,
+    });
+  }
 };
 ```
